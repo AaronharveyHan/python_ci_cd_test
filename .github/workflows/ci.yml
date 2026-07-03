@@ -1,148 +1,137 @@
-# 工作流名称，会显示在 GitHub Actions 页面上
-name: Python CI/CD
+name: Python CI
 
-# 定义触发条件（什么时候自动运行这个流水线）
 on:
-  # 当有代码推送到以下分支时触发
   push:
-    branches: [ main, master ]
-  # 当有人向以下分支发起 Pull Request 时触发
+    branches:
+      - main
+      - develop
+
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - develop
 
-# 定义全局权限，用于部署 GitHub Pages
 permissions:
-  contents: read   # 允许读取仓库内容
-  pages: write     # 允许写入 GitHub Pages
-  id-token: write  # 允许使用 OIDC 身份验证
+  contents: read
+  pages: write
+  id-token: write
 
-# 同时只允许一个部署任务运行，避免冲突
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: false
 
-# 定义要执行的任务
 jobs:
-  # ==========================================
-  # Job 1：代码检查 + 测试
-  # ==========================================
   lint-and-test:
-    # 运行环境：使用 GitHub 提供的最新 Ubuntu 虚拟机
     runs-on: ubuntu-latest
-    # 构建矩阵策略：用不同版本的 Python 分别跑一遍，确保兼容性
+
     strategy:
       matrix:
-        # 会在 4 个 Python 版本上各跑一次，总共执行 4 次
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version:
+          - "3.11"
+          - "3.12"
 
-    # 任务中的具体步骤（按顺序执行）
     steps:
-      # 第 1 步：把仓库代码拉取到虚拟机中
-      - name: Checkout code
-        # 使用 GitHub 官方的 checkout action（v4 版本）
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      # 第 2 步：在虚拟机上安装指定版本的 Python
-      # 名称中的 ${{ matrix.python-version }} 是模板变量，会被矩阵中的实际版本号替换
-      # 例如运行 3.11 时，显示为 "Set up Python 3.11"
-      - name: Set up Python ${{ matrix.python-version }}
-        # 使用 GitHub 官方的 setup-python action
-        uses: actions/setup-python@v5
-        # action 的输入参数
+      - name: Setup Python
+        uses: actions/setup-python@v6
         with:
-          # 指定要安装的 Python 版本，取自矩阵变量
           python-version: ${{ matrix.python-version }}
 
-      # 第 3 步：安装项目依赖
+      #
+      # 安装 uv
+      #
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      #
+      # 缓存依赖
+      #
+      - name: Enable cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+
+      #
+      # 安装依赖
+      #
       - name: Install dependencies
-        # run 表示直接执行 shell 命令（| 表示多行字符串）
         run: |
-          # 先升级 pip 到最新版本，避免兼容性问题
-          python -m pip install --upgrade pip
-          # 根据 requirements.txt 安装所有依赖（pytest、flake8、black 等）
-          pip install -r requirements.txt
+          uv sync --all-extras --dev
 
-      # 第 4 步：用 flake8 做代码静态检查（lint）
-      - name: Lint with flake8
+      - name: Flake8
         run: |
-          # 第一轮检查：只检测严重错误（语法错误 E9、未定义变量 F63/F7/F82）
-          # 如果发现这类错误，流水线直接失败
-          # --count       统计错误数量
-          # --select      只检查指定的错误类型
-          # --show-source 显示出错的源代码行
-          # --statistics   显示错误统计摘要
-          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          # 第二轮检查：放宽标准，只作为警告输出，不会导致流水线失败
-          # --exit-zero    无论发现多少问题，退出码都是 0（即不会失败）
-          # --max-complexity=10  代码圈复杂度超过 10 时发出警告
-          # --max-line-length=88 单行代码超过 88 字符时发出警告
-          flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+          uv run flake8 src tests
 
-      # 第 5 步：用 black 检查代码格式是否统一
-      - name: Check formatting with black
+      - name: Black
         run: |
-          # --check 模式：只检查不修改，如果格式不符合 black 规范则报错
-          black --check src/ tests/
+          uv run black --check src tests
 
-      # 第 6 步：运行测试并生成覆盖率报告
-      - name: Run tests with coverage
+      - name: isort
         run: |
-          # --cov=src           统计 src/ 目录的代码覆盖率
-          # --cov-report=xml    生成 XML 格式的覆盖率报告文件
-          # --cov-report=term-missing  在终端显示覆盖率，并列出未覆盖的行号
-          # --cov-report=html   生成 HTML 格式的覆盖率报告文件夹（用于部署到 GitHub Pages）
-          # -v                  详细模式，显示每个测试用例的名称和结果
-          pytest --cov=src --cov-report=xml --cov-report=term-missing --cov-report=html -v
+          uv run isort --check-only src tests
 
-      # 第 7 步：上传 HTML 覆盖率报告（供后续 deploy job 使用）
-      - name: Upload HTML coverage for deployment
-        # 只在 Python 3.12 上执行，避免重复上传 4 份
+      #
+      # 类型检查
+      #
+      - name: Mypy
+        run: |
+          uv run mypy src
+
+      #
+      # 单元测试
+      #
+      - name: Pytest
+        run: |
+          uv run pytest \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-report=html \
+            --cov-fail-under=80 \
+            -v
+
+      #
+      # 上传覆盖率
+      #
+      - name: Upload coverage
         if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
-          # artifact 名称，供 deploy job 下载
           name: htmlcov
-          # 只上传 htmlcov 文件夹
           path: htmlcov/
 
-  # ==========================================
-  # Job 2：部署覆盖率报告到 GitHub Pages
-  # ==========================================
   deploy-coverage:
-    # 只在 push 到 main/master 时部署，PR 不部署
-    # 因为 PR 的代码还没合并，不应该覆盖线上报告
-    if: github.event_name == 'push'
-    # 依赖 lint-and-test job 成功后才执行
-    needs: lint-and-test
-    # 运行环境
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    needs:
+      - lint-and-test
+
     runs-on: ubuntu-latest
-    # 标记为 GitHub Pages 部署环境
+
     environment:
       name: github-pages
-      # 部署成功后会生成一个 URL，显示在 Actions 页面上
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # 第 1 步：下载上一步生成的 HTML 报告
-      - name: Download HTML coverage report
+      - name: Download coverage
         uses: actions/download-artifact@v4
         with:
           name: htmlcov
-          # 下载到 htmlcov/ 目录
-          path: htmlcov/
+          path: htmlcov
 
-      # 第 2 步：把 htmlcov 目录配置为 GitHub Pages 的部署源
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # 第 3 步：打包 htmlcov 目录，准备上传
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          # 要部署的目录（htmlcov 里的 index.html 就是首页）
-          path: htmlcov/
+          path: htmlcov
 
-      # 第 4 步：正式部署到 GitHub Pages
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
