@@ -1,6 +1,6 @@
 """Tests for utils module."""
 
-from src.utils import reverse_string, is_palindrome, word_count
+from src.utils import is_palindrome, reverse_string, word_count
 
 
 class TestReverseString:

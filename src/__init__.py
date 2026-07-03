@@ -1,14 +1,14 @@
 """A simple calculator package for CI/CD demo."""
 
-from src.calculator import add, subtract, multiply, divide
-from src.utils import reverse_string, is_palindrome, word_count
+from src.calculator import add, divide, multiply, subtract
+from src.utils import is_palindrome, reverse_string, word_count
 
 __all__ = [
     "add",
-    "subtract",
-    "multiply",
     "divide",
-    "reverse_string",
     "is_palindrome",
+    "multiply",
+    "reverse_string",
+    "subtract",
     "word_count",
 ]
