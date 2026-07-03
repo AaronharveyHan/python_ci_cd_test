@@ -1,0 +1,142 @@
+# =============================================================================
+# Pre-commit 配置文件
+# =============================================================================
+# pre-commit 是一个在 git commit 之前自动运行代码检查工具的框架
+# 安装:uv pip install pre-commit 或 pip install pre-commit
+# 激活:pre-commit install
+# 运行:每次 git commit 时自动执行
+# 手动运行所有检查:pre-commit run --all-files
+# =============================================================================
+
+# 默认配置：每次提交都会运行这些钩子
+default_install_hook_types:
+  # pre-commit: 在 commit 之前运行（默认）
+  - pre-commit
+
+# 默认暂存模式：只检查已暂存的文件（推荐）
+# 如果设为 true，会检查所有文件，包括未暂存的
+default_stages:
+  - pre-commit
+
+# 自动更新钩子版本的频率
+# 每次运行 pre-commit 时检查是否有新版本
+ci:
+  autofix_commit_msg: "style: auto fixes from pre-commit hooks"
+  autoupdate_commit_msg: "chore: update pre-commit hooks"
+
+# =============================================================================
+# 钩子列表（按顺序执行）
+# =============================================================================
+repos:
+  # ---------------------------------------------------------------------------
+  # 1. 通用预置钩子（来自官方 pre-commit-hooks 仓库）
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0   # 使用指定的版本（标签或 commit hash）
+
+    hooks:
+      # 检查是否有尾随空格（删除行尾多余的空格）
+      - id: trailing-whitespace
+
+      # 检查文件是否以换行符结尾（POSIX 标准要求）
+      - id: end-of-file-fixer
+
+      # 检查是否有合并冲突标记（<<<<<<<、=======、>>>>>>>）
+      - id: check-merge-conflict
+
+      # 检查 YAML 文件语法是否正确
+      - id: check-yaml
+
+      # 检查 TOML 文件语法是否正确（pyproject.toml 等）
+      - id: check-toml
+
+      # 检查是否有大文件（防止意外提交大文件）
+      # 默认阈值是 500KB，可以在 args 中修改
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+      # 检查是否有调试器导入（如 import pdb）
+      - id: debug-statements
+
+  # ---------------------------------------------------------------------------
+  # 2. Black（代码格式化）
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/psf/black
+    rev: 25.1.0   # 使用最新的稳定版本
+
+    hooks:
+      - id: black
+        # 使用与 pyproject.toml 中相同的配置
+        args: ["--line-length=88"]
+
+  # ---------------------------------------------------------------------------
+  # 3. isort（import 语句排序）
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.0    # 使用最新的稳定版本
+
+    hooks:
+      - id: isort
+        # 使用与 pyproject.toml 中相同的配置
+        args: ["--profile=black", "--line-length=88"]
+
+  # ---------------------------------------------------------------------------
+  # 4. Flake8（代码静态检查）
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1    # 使用最新的稳定版本
+
+    hooks:
+      - id: flake8
+        # 使用与 CI 中相同的配置
+        args:
+          - "--max-line-length=88"
+          - "--max-complexity=10"
+          - "--select=E9,F63,F7,F82"  # 只检查严重错误
+          - "--statistics"
+
+  # ---------------------------------------------------------------------------
+  # 5. Mypy（类型检查）
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1   # 使用最新的稳定版本
+
+    hooks:
+      - id: mypy
+        # 只检查 src 目录（测试代码通常不需要严格的类型检查）
+        files: ^src/
+        # 添加额外的依赖，让 mypy 能找到项目的类型存根
+        additional_dependencies: []
+
+  # ---------------------------------------------------------------------------
+  # 6. Pytest（运行测试）- 可选，但推荐
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest
+        entry: uv run pytest -v --tb=short
+        language: system
+        pass_filenames: false
+        always_run: true
+        # 只在以下情况运行测试：
+        # - 修改了 .py 文件
+        # - 修改了 pyproject.toml
+        # - 修改了 uv.lock
+        files: ^(src/|tests/|pyproject\.toml|uv\.lock)
+
+# =============================================================================
+# 排除规则（哪些文件不检查）
+# =============================================================================
+exclude: |
+  (?x)^(
+    # 排除这些目录
+    \.venv/|
+    \.git/|
+    \.mypy_cache/|
+    \.pytest_cache/|
+    __pycache__/|
+    htmlcov/|
+    \.coverage|
+    coverage\.xml
+  )
