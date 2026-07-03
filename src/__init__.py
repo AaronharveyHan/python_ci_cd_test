@@ -1,23 +1,14 @@
-"""A simple calculator module for CI/CD demo."""
+"""A simple calculator package for CI/CD demo."""
 
+from src.calculator import add, subtract, multiply, divide
+from src.utils import reverse_string, is_palindrome, word_count
 
-def add(a: float, b: float) -> float:
-    """Return the sum of a and b."""
-    return a + b
-
-
-def subtract(a: float, b: float) -> float:
-    """Return the difference of a and b."""
-    return a - b
-
-
-def multiply(a: float, b: float) -> float:
-    """Return the product of a and b."""
-    return a * b
-
-
-def divide(a: float, b: float) -> float:
-    """Return the quotient of a and b. Raises ValueError if b is zero."""
-    if b == 0:
-        raise ValueError("Cannot divide by zero")
-    return a / b
+__all__ = [
+    "add",
+    "subtract",
+    "multiply",
+    "divide",
+    "reverse_string",
+    "is_palindrome",
+    "word_count",
+]
