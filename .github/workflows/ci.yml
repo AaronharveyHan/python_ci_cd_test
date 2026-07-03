@@ -191,6 +191,8 @@ jobs:
           name: htmlcov
           # 要上传的文件路径(htmlcov 目录包含 HTML 报告的所有文件）
           path: htmlcov/
+          # 保留时间（天），避免 artifact 堆积
+          retention-days: 7
 
   # =============================================================================
   # Job 2: 部署覆盖率报告到 GitHub Pages
@@ -230,6 +232,26 @@ jobs:
           name: htmlcov
           # 下载到本地哪个目录
           path: htmlcov
+
+      # ---------------------------------------------------------------------------
+      # 步骤 1.5:调试 - 检查下载的文件
+      # ---------------------------------------------------------------------------
+      - name: Debug - List downloaded files
+        run: |
+          # 显示下载的 htmlcov 目录内容
+          echo "=== Downloaded files in htmlcov/ ==="
+          ls -la htmlcov/
+
+          # 检查 index.html 是否存在（这是 Pages 的入口文件）
+          echo "=== Checking if index.html exists ==="
+          if [ -f htmlcov/index.html ]; then
+            echo "✅ index.html found"
+            echo "File size: $(du -h htmlcov/index.html | cut -f1)"
+          else
+            echo "❌ index.html NOT found"
+            echo "This is a critical error - deployment cannot continue"
+            exit 1
+          fi
 
       # ---------------------------------------------------------------------------
       # 步骤 2:配置 GitHub Pages 环境
