@@ -4,22 +4,26 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual environments
 .venv/
+env/
 venv/
-ENV/
-
-# Pytest
-.pytest_cache/
-
-# Coverage
-coverage.xml
-htmlcov/
-.coverage
-.coverage.*
 
 # IDE
 .vscode/
@@ -28,14 +32,16 @@ htmlcov/
 *.swo
 *~
 
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# uv (本地开发配置，不影响 CI)
+uv.toml
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Distribution
-dist/
-build/
-*.whl
-
-# uv
-uv.lock
