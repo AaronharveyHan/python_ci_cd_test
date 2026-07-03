@@ -159,24 +159,23 @@ jobs:
           # uv run pytest: 在虚拟环境中运行 pytest
           # --cov=src: 统计 src 目录的代码覆盖率(哪些代码被测试执行过）
           # --cov-report=xml: 生成 XML 格式的覆盖率报告(文件名为 coverage.xml）
-          # XML 格式是行业标准，可以被 Codecov、SonarQube 等工具解析
+          #   XML 格式是行业标准，可以被 Codecov、SonarQube 等工具解析
           # --cov-report=term-missing: 在终端显示覆盖率，并列出未覆盖的行号
-          # 输出示例:src/calculator.py  10  2  80%  15-16
+          #   输出示例:src/calculator.py  10  2  80%  15-16
           # --cov-report=html: 生成 HTML 格式的覆盖率报告(htmlcov 目录）
-          # 可以在浏览器打开 htmlcov/index.html 查看带颜色高亮的报告
+          #   可以在浏览器打开 htmlcov/index.html 查看带颜色高亮的报告
           # --cov-fail-under=80: 如果覆盖率低于 80%，测试失败
-          # 这是一种质量门槛，确保代码有足够的测试覆盖
+          #   这是一种质量门槛，确保代码有足够的测试覆盖
           # -v: 详细模式，显示每个测试用例的名称和结果
-          # 输出示例:tests/test_calculator.py::TestAdd::test_add_positive PASSED
-
+          #   输出示例:tests/test_calculator.py::TestAdd::test_add_positive PASSED
+          # uv run pytest --cov=src --cov-report=xml --cov-report=term-missing --cov-report=html --cov-fail-under=80 -v
           uv run pytest \
             --cov=src \
-            --cov-report=xml \ 
+            --cov-report=xml \
             --cov-report=term-missing \
             --cov-report=html \
             --cov-fail-under=80 \
             -v
-
       # ---------------------------------------------------------------------------
       # 步骤 11:上传覆盖率报告(只在 Python 3.12 上执行）
       # ---------------------------------------------------------------------------
